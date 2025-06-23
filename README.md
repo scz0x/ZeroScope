@@ -70,6 +70,5 @@ Made with 💻 by [scz0x](https://t.me/SCZ0X_CH)
 
 ---
 
-## ⚠️ Disclaimer
-**Disclaimer:**  
+## ⚠️ Disclaimer 
 ZeroScope is intended solely for educational, research, and ethical security analysis purposes. Use it only on APK files you own or have explicit authorization to analyze. The authors are not responsible for misuse or any consequences arising from unauthorized use.
