@@ -74,6 +74,3 @@ Made with 💻 by [scz0x](https://t.me/SCZ0X_CH)
 
 <<<<<<< HEAD
 ZeroScope is built for educational and ethical analysis. Please use it responsibly, only on files you own or have explicit permission to inspect.
-=======
-ZeroScope is built for educational and ethical analysis. Please use it responsibly, only on files you own or have explicit permission to inspect.
->>>>>>> 3207b6bd73c2a40ae7f4866de7ea201a550875f4
