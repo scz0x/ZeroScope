@@ -11,13 +11,16 @@ import (
 )
 
 type Report struct {
-	FileCounts   map[string]int     `json:"file_counts"`
-	SizesMB      map[string]float64 `json:"sizes_mb"`
-	Suspicious   []string           `json:"suspicious_so"`
-	Permissions  []string           `json:"permissions"`
-	Dangerous    []string           `json:"dangerous_permissions"`
-	SecretsFound []string           `json:"secrets_found"`
+	FileCounts     map[string]int     `json:"file_counts"`
+	SizesMB        map[string]float64 `json:"sizes_mb"`
+	Suspicious     []string           `json:"suspicious_so"`
+	Permissions    []string           `json:"permissions"`
+	Dangerous      []string           `json:"dangerous_permissions"`
+	SecretsFound   []string           `json:"secrets_found"`
+	APICalls       []string           `json:"api_calls,omitempty"`
+	SensitivePaths []string           `json:"sensitive_paths,omitempty"`
 }
+
 
 func IsDangerous(p string) bool {
 	dangerousPermissions := []string{

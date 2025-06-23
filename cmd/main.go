@@ -7,62 +7,59 @@ import (
 	"strings"
 
 	"zeroscope/core"
-	"zeroscope/utils"
 )
 
 func main() {
-	apksDir := "APKs"
-	files, err := os.ReadDir(apksDir)
+	apkFolder := "APKs"
+	reportBase := "reports"
+	tmpFolder := "tmp"
+
+	files, err := os.ReadDir(apkFolder)
 	if err != nil {
-		fmt.Println("[✗] APKs folder not found:", err)
+		fmt.Println("[✗] Failed to read APKs folder:", err)
 		return
 	}
 
-	for _, file := range files {
-		if file.IsDir() || !strings.HasSuffix(file.Name(), ".apk") {
+	for _, entry := range files {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".apk") {
 			continue
 		}
 
-		apkPath := filepath.Join(apksDir, file.Name())
-		fmt.Println("\n[*] Scanning", apkPath)
+		name := entry.Name()
+		apkPath := filepath.Join(apkFolder, name)
+		baseName := strings.TrimSuffix(name, ".apk")
 
-		tmpDir := "tmp"
-		os.MkdirAll(tmpDir, 0755)
+		fmt.Println("🔍 Analyzing:", apkPath)
 
-		if err := utils.UnzipAPK(apkPath, tmpDir); err != nil {
-			fmt.Println("[✗] Failed to unzip:", err)
+		apkTempDir := filepath.Join(tmpFolder, baseName)
+		err := core.UnzipAPK(apkPath, apkTempDir)
+		if err != nil {
+			fmt.Println("[✗] Failed to unpack:", err)
 			continue
 		}
 
-		counts, sizes, so := core.AnalyzeExtractedFiles(tmpDir)
+		report := core.AnalyzeAPK(apkTempDir)
 
-		manifest := filepath.Join(tmpDir, "AndroidManifest.xml")
-		var permissions []string
-		if _, err := os.Stat(manifest); err == nil {
-			permissions = core.AnalyzePermissions(manifest)
+		outputDir := filepath.Join(reportBase, baseName)
+		err = os.MkdirAll(outputDir, 0755)
+		if err != nil {
+			fmt.Println("[✗] Failed to create report folder:", err)
+			continue
 		}
 
-		secrets := core.ScanSensitiveStrings(tmpDir)
+		core.GenerateJSONReport(outputDir, report)
+		core.GenerateHTMLReport(outputDir, report)
+		core.GeneratePDFReport(outputDir, report)
 
-		report := core.Report{
-			FileCounts:   counts,
-			SizesMB:      sizes,
-			Suspicious:   so,
-			Permissions:  permissions,
-			Dangerous:    nil,
-			SecretsFound: secrets,
+		err = os.RemoveAll(apkTempDir)
+		if err == nil {
+			fmt.Println("🧹 Temporary files removed:", apkTempDir)
+		} else {
+			fmt.Println("[!] Failed to remove temp folder:", err)
 		}
 
-		reportDir := filepath.Join("reports", strings.TrimSuffix(file.Name(), ".apk"))
-		core.GenerateReportJSON(reportDir, report)
-		core.GenerateHTMLReport(reportDir, report)
-		core.GeneratePDFReport(reportDir, report)
-
-		os.RemoveAll(tmpDir)
-		fmt.Println("[✓] Finished", file.Name())
+		fmt.Println("✅ Report saved:", outputDir)
 	}
 
-	fmt.Println("\n[✓] Analysis complete.")
-	fmt.Print("Press ENTER to exit...")
-	fmt.Scanln()
+	fmt.Println("🎯 All APKs processed.")
 }
