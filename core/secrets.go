@@ -20,10 +20,10 @@ func ScanSensitiveStrings(baseDir string) []string {
 			return nil
 		}
 
-		// تحديد أنواع الملفات القابلة للفحص
+		
 		switch strings.ToLower(filepath.Ext(path)) {
 		case ".dex", ".xml", ".json", ".txt", ".js", ".conf", ".cfg", ".ini", ".so":
-			// قابل للفحص
+			
 		default:
 			return nil
 		}
@@ -45,7 +45,7 @@ func ScanSensitiveStrings(baseDir string) []string {
 					findings = append(findings, entry)
 				}
 			}
-			lineNum++ // <-- هذا السطر مهم لزيادة رقم السطر
+			lineNum++ 
 		}
 		return nil
 	})
