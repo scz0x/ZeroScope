@@ -7,49 +7,86 @@ import (
 	"strings"
 )
 
-func AnalyzeExtractedFiles(baseDir string) (map[string]int, map[string]float64, []string) {
-	counts := map[string]int{"xml": 0, "dex": 0, "so": 0, "ttf": 0, "asset": 0, "other": 0}
-	sizes := map[string]float64{"xml": 0, "dex": 0, "so": 0, "ttf": 0, "asset": 0, "other": 0}
-	var suspiciousSO []string
+func AnalyzeAPK(apkFolder string) Report {
+	report := Report{}
 
-	filepath.Walk(baseDir, func(path string, info os.FileInfo, err error) error {
+	manifestPath := filepath.Join(apkFolder, "AndroidManifest.xml")
+	if _, err := os.Stat(manifestPath); err == nil {
+		report.Permissions = ExtractPermissions(manifestPath)
+		report.Dangerous = FilterDangerousPermissions(report.Permissions)
+		report.DangerousSet = make(map[string]bool)
+		for _, d := range report.Dangerous {
+			report.DangerousSet[d] = true
+		}
+	}
+
+	report.FileCounts, report.SizesMB = CountFileTypes(apkFolder)
+	report.Suspicious = DetectSuspiciousFiles(apkFolder)
+
+	dexStrings := ExtractDexStrings(apkFolder)
+
+	report.SecretsFound = ScanSensitiveStringsFromList(dexStrings)
+	report.APICalls = ScanForAPICallsGrouped(dexStrings)
+	report.SensitivePaths = ScanForSensitivePaths(dexStrings)
+
+	var classified []string
+	classified = append(classified, report.SecretsFound...)
+	for _, group := range report.APICalls {
+		classified = append(classified, group...)
+	}
+	classified = append(classified, report.SensitivePaths...)
+
+	seen := make(map[string]bool)
+	for _, c := range classified {
+		seen[c] = true
+	}
+	for _, line := range dexStrings {
+		line = strings.TrimSpace(line)
+		if line == "" || seen[line] {
+			continue
+		}
+		report.Unclassified = append(report.Unclassified, line)
+	}
+
+	return report
+}
+
+func AnalyzeExtractedArchives(folder string, report *Report) {
+	filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
 		}
-		sizeMB := float64(info.Size()) / (1024 * 1024)
-		l := strings.ToLower(path)
-
-		switch {
-		case strings.HasSuffix(l, ".xml"):
-			counts["xml"]++
-			sizes["xml"] += sizeMB
-		case strings.HasSuffix(l, ".dex"):
-			counts["dex"]++
-			sizes["dex"] += sizeMB
-		case strings.HasSuffix(l, ".so"):
-			counts["so"]++
-			sizes["so"] += sizeMB
-			if info.Size() > 10*1024*1024 {
-				fmt.Printf("\x1b[31m[!] Suspicious SO: %s (%.2f MB)\x1b[0m\n", filepath.Base(path), sizeMB)
-				suspiciousSO = append(suspiciousSO, filepath.Base(path))
+		lower := strings.ToLower(path)
+		if strings.HasSuffix(lower, ".json") || strings.HasSuffix(lower, ".txt") || strings.HasSuffix(lower, ".xml") || strings.HasSuffix(lower, ".cfg") {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return nil
 			}
-		case strings.HasSuffix(l, ".ttf"):
-			counts["ttf"]++
-			sizes["ttf"] += sizeMB
-		case strings.Contains(l, "asset"):
-			counts["asset"]++
-			sizes["asset"] += sizeMB
-		default:
-			counts["other"]++
-			sizes["other"] += sizeMB
+			lines := strings.Split(string(data), "\n")
+			report.SecretsFound = append(report.SecretsFound, ScanSensitiveStringsFromList(lines)...)
+			apiCalls := ScanForAPICallsGrouped(lines)
+			for method, group := range apiCalls {
+				report.APICalls[method] = append(report.APICalls[method], group...)
+			}
+			report.SensitivePaths = append(report.SensitivePaths, ScanForSensitivePaths(lines)...)
 		}
 		return nil
 	})
+}
 
-	fmt.Println("\n[✓] File summary:")
-	for k := range counts {
-		fmt.Printf("  ├─ %-6s: %d file(s) (%.2f MB)\n", strings.ToUpper(k), counts[k], sizes[k])
+func SaveUnclassifiedText(lines []string, outputPath string) {
+	if len(lines) == 0 {
+		return
 	}
-
-	return counts, sizes, suspiciousSO
+	txtPath := filepath.Join(outputPath, "unclassified.txt")
+	f, err := os.Create(txtPath)
+	if err != nil {
+		fmt.Println("[✗] Failed to save unclassified.txt:", err)
+		return
+	}
+	defer f.Close()
+	for _, line := range lines {
+		_, _ = f.WriteString(line + "\n")
+	}
+	fmt.Println("📎 Saved:", txtPath)
 }

@@ -15,18 +15,15 @@ func UnzipAPK(src string, dest string) error {
 	defer r.Close()
 
 	for _, f := range r.File {
-		fp := filepath.Join(dest, f.Name)
-
+		fpath := filepath.Join(dest, f.Name)
 		if f.FileInfo().IsDir() {
-			os.MkdirAll(fp, os.ModePerm)
+			os.MkdirAll(fpath, os.ModePerm)
 			continue
 		}
-
-		if err := os.MkdirAll(filepath.Dir(fp), os.ModePerm); err != nil {
+		if err := os.MkdirAll(filepath.Dir(fpath), os.ModePerm); err != nil {
 			return err
 		}
-
-		outFile, err := os.OpenFile(fp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		outFile, err := os.OpenFile(fpath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 		if err != nil {
 			return err
 		}
@@ -36,10 +33,8 @@ func UnzipAPK(src string, dest string) error {
 			return err
 		}
 		_, err = io.Copy(outFile, rc)
-
 		outFile.Close()
 		rc.Close()
-
 		if err != nil {
 			return err
 		}
