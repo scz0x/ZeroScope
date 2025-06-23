@@ -9,11 +9,12 @@ import (
 	"zeroscope/core"
 )
 
+
 func main() {
 	apkFolder := "APKs"
 	reportBase := "reports"
 	tmpFolder := "tmp"
-
+	fmt.Println("📦 ZeroScope", core.Version)
 	files, err := os.ReadDir(apkFolder)
 	if err != nil {
 		fmt.Println("[✗] Failed to read APKs folder:", err)
