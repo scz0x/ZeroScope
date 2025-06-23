@@ -6,7 +6,7 @@ func GeneratePDF(path string, permissions []string, secrets []string) error {
     pdf := gofpdf.New("P", "mm", "A4", "")
     pdf.AddPage()
     pdf.SetFont("Arial", "B", 16)
-    pdf.Cell(40, 10, "SCZ-Check Analysis Report")
+    pdf.Cell(40, 10, "ZeroScope Analysis Report")
     pdf.Ln(12)
 
     pdf.SetFont("Arial", "", 12)
